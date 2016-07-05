@@ -24,14 +24,17 @@ namespace VRTK
         public bool hideControllerOnTouch = false;
         public float hideControllerDelay = 0f;
         public Color globalTouchHighlightColor = Color.clear;
+        public GameObject customRigidbodyObject;
 
         public event ObjectInteractEventHandler ControllerTouchInteractableObject;
         public event ObjectInteractEventHandler ControllerUntouchInteractableObject;
 
         private GameObject touchedObject = null;
+        private GameObject lastTouchedObject = null;
+
         private SteamVR_TrackedObject trackedController;
         private VRTK_ControllerActions controllerActions;
-        private GameObject controllerRigidBody;
+        private GameObject controllerRigidBodyObject;
 
         public virtual void OnControllerTouchInteractableObject(ObjectInteractEventArgs e)
         {
@@ -77,9 +80,9 @@ namespace VRTK
 
         public void ToggleControllerRigidBody(bool state)
         {
-            if (controllerRigidBody && controllerRigidBody.GetComponent<Rigidbody>())
+            if (controllerRigidBodyObject && controllerRigidBodyObject.GetComponent<Rigidbody>())
             {
-                controllerRigidBody.GetComponent<Rigidbody>().detectCollisions = state;
+                controllerRigidBodyObject.GetComponent<Rigidbody>().detectCollisions = state;
             }
         }
 
@@ -105,17 +108,27 @@ namespace VRTK
                 return;
             }
 
+            Utilities.SetPlayerObject(this.gameObject, VRTK_PlayerObject.ObjectTypes.Controller);
+
             CreateTouchCollider(this.gameObject);
             CreateControllerRigidBody();
         }
 
         private void OnTriggerEnter(Collider collider)
         {
-            OnTriggerStay(collider);
+            if (IsObjectInteractable(collider.gameObject) && (touchedObject == null || !touchedObject.GetComponent<VRTK_InteractableObject>().IsGrabbed()))
+            {
+                lastTouchedObject = collider.gameObject;
+            }
         }
 
         private void OnTriggerStay(Collider collider)
         {
+            if (touchedObject != null && touchedObject != lastTouchedObject && !touchedObject.GetComponent<VRTK_InteractableObject>().IsGrabbed())
+            {
+                ForceStopTouching();
+            }
+
             if (touchedObject == null && IsObjectInteractable(collider.gameObject))
             {
                 if (collider.gameObject.GetComponent<VRTK_InteractableObject>())
@@ -129,7 +142,7 @@ namespace VRTK
 
                 var touchedObjectScript = touchedObject.GetComponent<VRTK_InteractableObject>();
 
-                if(! touchedObjectScript.IsValidInteractableController(this.gameObject, touchedObjectScript.allowedTouchControllers))
+                if (!touchedObjectScript.IsValidInteractableController(this.gameObject, touchedObjectScript.allowedTouchControllers))
                 {
                     touchedObject = null;
                     return;
@@ -197,9 +210,14 @@ namespace VRTK
 
         private void CreateTouchCollider(GameObject obj)
         {
-            SphereCollider collider = obj.AddComponent<SphereCollider>();
-            collider.radius = 0.06f;
-            collider.center = new Vector3(0f, -0.04f, 0f);
+            var collider = this.GetComponent<Collider>();
+            if(collider == null)
+            {
+                var genCollider = obj.AddComponent<SphereCollider>();
+                genCollider.radius = 0.06f;
+                genCollider.center = new Vector3(0f, -0.04f, 0f);
+                collider = genCollider;
+            }
             collider.isTrigger = true;
         }
 
@@ -220,24 +238,35 @@ namespace VRTK
 
         private void CreateControllerRigidBody()
         {
-            controllerRigidBody = new GameObject(string.Format("[{0}]_RigidBody_Holder", this.gameObject.name));
-            controllerRigidBody.transform.parent = this.transform;
+            if (customRigidbodyObject != null)
+            {
+                controllerRigidBodyObject = customRigidbodyObject;
+            } else
+            {
+                controllerRigidBodyObject = new GameObject();
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0f, -0.01f, -0.098f), new Vector3(0.04f, 0.025f, 0.15f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0f, -0.009f, -0.002f), new Vector3(0.05f, 0.025f, 0.04f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0f, -0.024f, 0.01f), new Vector3(0.07f, 0.02f, 0.02f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0f, -0.045f, 0.022f), new Vector3(0.07f, 0.02f, 0.022f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0f, -0.0625f, 0.03f), new Vector3(0.065f, 0.015f, 0.025f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(0.045f, -0.035f, 0.005f), new Vector3(0.02f, 0.025f, 0.025f));
+                CreateBoxCollider(controllerRigidBodyObject, new Vector3(-0.045f, -0.035f, 0.005f), new Vector3(0.02f, 0.025f, 0.025f));
 
-            CreateBoxCollider(controllerRigidBody, new Vector3(0f, -0.01f, -0.098f), new Vector3(0.04f, 0.025f, 0.15f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(0f, -0.009f, -0.002f), new Vector3(0.05f, 0.025f, 0.04f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(0f, -0.024f, 0.01f), new Vector3(0.07f, 0.02f, 0.02f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(0f, -0.045f, 0.022f), new Vector3(0.07f, 0.02f, 0.022f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(0f, -0.0625f, 0.03f), new Vector3(0.065f, 0.015f, 0.025f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(0.045f, -0.035f, 0.005f), new Vector3(0.02f, 0.025f, 0.025f));
-            CreateBoxCollider(controllerRigidBody, new Vector3(-0.045f, -0.035f, 0.005f), new Vector3(0.02f, 0.025f, 0.025f));
-            Rigidbody rb = controllerRigidBody.AddComponent<Rigidbody>();
+                var createRB = controllerRigidBodyObject.AddComponent<Rigidbody>();
+                createRB.mass = 100f;
+            }
 
-            controllerRigidBody.transform.localPosition = Vector3.zero;
+            var controllerRB = controllerRigidBodyObject.GetComponent<Rigidbody>();
 
-            rb.useGravity = false;
-            rb.mass = 100f;
-            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
-            rb.constraints = RigidbodyConstraints.FreezeAll;
+            controllerRigidBodyObject.name = string.Format("[{0}]_RigidBody_Holder", this.gameObject.name);
+            controllerRigidBodyObject.transform.parent = this.transform;
+            controllerRigidBodyObject.transform.localPosition = Vector3.zero;
+
+            controllerRB.useGravity = false;
+            controllerRB.isKinematic = false;
+            controllerRB.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            controllerRB.constraints = RigidbodyConstraints.FreezeAll;
+
             ToggleControllerRigidBody(false);
         }
     }

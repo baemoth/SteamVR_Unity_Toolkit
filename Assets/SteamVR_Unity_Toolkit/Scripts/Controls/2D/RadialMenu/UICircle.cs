@@ -30,15 +30,13 @@ public class UICircle : Graphic
         set
         {
             if (m_Texture == value)
-            return;
+            {
+                return;
+            }
             m_Texture = value;
             SetVerticesDirty();
             SetMaterialDirty();
         }
-    }
-    void Update()
-    {
-        this.thickness = (int)Mathf.Clamp(this.thickness, 0, rectTransform.rect.width / 2);
     }
 
     protected UIVertex[] SetVbo(Vector2[] vertices, Vector2[] uvs)
@@ -55,13 +53,13 @@ public class UICircle : Graphic
         return vbo;
     }
 
+    [System.Obsolete("Use OnPopulateMesh(VertexHelper vh) instead.")]
     protected override void OnPopulateMesh(Mesh toFill)
     {
         float outer = -rectTransform.pivot.x * rectTransform.rect.width;
         float inner = -rectTransform.pivot.x * rectTransform.rect.width + this.thickness;
         toFill.Clear();
         var vbo = new VertexHelper(toFill);
-        UIVertex vert = UIVertex.simpleVert;
         Vector2 prevX = Vector2.zero;
         Vector2 prevY = Vector2.zero;
         Vector2 uv0 = new Vector2(0, 0);
@@ -75,13 +73,11 @@ public class UICircle : Graphic
         float f = (this.fillPercent / 100f);
         float degrees = 360f / segments;
         int fa = (int)((segments + 1) * f);
-        for (int i = -1 -(fa/2); i < fa/2 + 1; i++)
+        for (int i = -1 - (fa / 2); i < fa / 2 + 1; i++)
         {
             float rad = Mathf.Deg2Rad * (i * degrees);
             float c = Mathf.Cos(rad);
             float s = Mathf.Sin(rad);
-            float x = outer * c;
-            float y = inner * c;
             uv0 = new Vector2(0, 1);
             uv1 = new Vector2(1, 1);
             uv2 = new Vector2(1, 0);
@@ -106,5 +102,10 @@ public class UICircle : Graphic
         {
             vbo.FillMesh(toFill);
         }
+    }
+
+    private void Update()
+    {
+        this.thickness = (int)Mathf.Clamp(this.thickness, 0, rectTransform.rect.width / 2);
     }
 }

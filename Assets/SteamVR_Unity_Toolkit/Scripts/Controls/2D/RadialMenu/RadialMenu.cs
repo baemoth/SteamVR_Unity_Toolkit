@@ -6,16 +6,17 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
 [ExecuteInEditMode] //Lets us set up buttons from inspector option
-public class RadialMenu : MonoBehaviour {
+public class RadialMenu : MonoBehaviour
+{
 
     #region Variables
     public List<RadialMenuButton> Buttons;
     public GameObject buttonPrefab;
-    [Range(0f,1f)]
+    [Range(0f, 1f)]
     public float buttonThickness = 0.5f;
     public Color buttonColor = Color.white;
     public float offsetDistance = 1;
-    [Range(0,359)]
+    [Range(0, 359)]
     public float offsetRotation;
     public bool rotateIcons;
     public float iconMargin;
@@ -25,27 +26,25 @@ public class RadialMenu : MonoBehaviour {
     //Has to be public to keep state from editor -> play mode?
     public List<GameObject> menuButtons;
 
-    float currentTouchAngle;
-    int currentHover = -1;
-    int currentPress = -1;
+    private int currentHover = -1;
+    private int currentPress = -1;
     #endregion
 
     #region Unity Methods
 
-    void Start()
+    private void Start()
     {
         if (Application.isPlaying)
         {
-            if(!isShown)
+            if (!isShown)
             {
                 transform.localScale = Vector3.zero;
             }
             RegenerateButtons();
         }
-
     }
 
-    void Update()
+    private void Update()
     {
         //Keep track of pressed button and constantly invoke Hold event
         if (currentPress != -1)
@@ -59,12 +58,12 @@ public class RadialMenu : MonoBehaviour {
     #region Interaction
 
     //Turns and Angle and Event type into a button action
-    void InteractButton(float angle, ButtonEvent evt) //Can't pass ExecuteEvents as parameter? Unity gives error
+    private void InteractButton(float angle, ButtonEvent evt) //Can't pass ExecuteEvents as parameter? Unity gives error
     {
         //Get button ID from angle
         float buttonAngle = 360f / Buttons.Count; //Each button is an arc with this angle
         angle = mod((angle + offsetRotation), 360); //Offset the touch coordinate with our offset
-        currentTouchAngle = angle; //Keep track of our angle for outside use if we want it later
+
         int buttonID = (int)mod(((angle + (buttonAngle / 2f)) / buttonAngle), Buttons.Count); //Convert angle into ButtonID (This is the magic)
         var pointer = new PointerEventData(EventSystem.current); //Create a new EventSystem (UI) Event
 
@@ -121,12 +120,11 @@ public class RadialMenu : MonoBehaviour {
         {
             ShowMenu();
         }
-
     }
 
     public void StopTouching()
     {
-        if(currentHover != -1)
+        if (currentHover != -1)
         {
             var pointer = new PointerEventData(EventSystem.current);
             ExecuteEvents.Execute(menuButtons[currentHover], pointer, ExecuteEvents.pointerExitHandler);
@@ -167,7 +165,7 @@ public class RadialMenu : MonoBehaviour {
     }
 
     //Simple tweening for menu, scales linearly from 0 to 1 and 1 to 0
-    IEnumerator TweenMenuScale(bool show)
+    private IEnumerator TweenMenuScale(bool show)
     {
         float targetScale = 0;
         Vector3 Dir = -1 * Vector3.one;
@@ -269,7 +267,7 @@ public class RadialMenu : MonoBehaviour {
         RegenerateButtons();
     }
 
-    void RemoveAllButtons()
+    private void RemoveAllButtons()
     {
         if (menuButtons == null)
         {
@@ -286,7 +284,7 @@ public class RadialMenu : MonoBehaviour {
 
     #region Utility
 
-    float mod(float a, float b)
+    private float mod(float a, float b)
     {
         return a - b * Mathf.Floor(a / b);
     }
@@ -312,7 +310,8 @@ public class RadialMenuButton
     }
 }
 
-public enum ButtonEvent {
+public enum ButtonEvent
+{
     hoverOn,
     hoverOff,
     click,
